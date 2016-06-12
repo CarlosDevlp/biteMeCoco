@@ -18,7 +18,7 @@ public:
 		_distanceMax=15;
                 _maxAngle=90+45;
                 _minAngle=90;
-                
+                _times=0;                
         	   _servoMouth.write(_maxAngle);                
 	}
 
@@ -51,12 +51,15 @@ public:
 		_distanceMax=distanceMax;
 	}
 
+        void setTimes(int times){
+          _times=times;
+        }
+
 	int getDistance(){
 		return _distance;
 	}
 
-private:
-	
+
 	void bite(){
 	  int a;
 	  
@@ -73,10 +76,45 @@ private:
 	  
 	}
 
+        void biteForTimes (){
+          
+          int distance=calcDistance();
+  
+	  if(_distance<=_distanceMax) 
+                  while(_times>0){
+                    bite();
+                    _times--;
+                  }
+                  
+          
+          
+        }
+        
+        void closeMouth(){
+          int a;
+	  
+	  //bajar la mandibula
+	  for(a=_maxAngle;a>=_minAngle;a--){
+	    _servoMouth.write(a);
+	    delay(0);
+	  }
+        }
+
+        void openMouth(){
+          int a;
+	  //subir la mandibula  
+	  for(a=_minAngle;a<_maxAngle;a++){
+	    _servoMouth.write(a);
+	    delay(20);
+	  }
+        }
+                
+
 	void normal(){
 	   _servoMouth.write(_maxAngle);
 	}
-
+private:
+	
 
 	int calcDistance(){
 	    long duration;
@@ -92,7 +130,8 @@ private:
 	}
 
 
-         Servo _servoMouth;  // create servo object to control a servo 
+        Servo _servoMouth;  // create servo object to control a servo 
+        int _times;
 	int _servoPIN;
 	int _trigPIN; 
 	int _echoPIN;
@@ -118,7 +157,7 @@ Coco mCoco;
 void setup() 
 { 
    mCoco.init();
-   mCoco.setMaxDistance(12);
+   mCoco.setMaxDistance(0);
    pinMode(ledPIN,OUTPUT);
    BT.begin(9600);       // Inicializamos el puerto serie BT que hemos creado
     
@@ -127,12 +166,31 @@ void setup()
 
 
 
-boolean execute=false,bite=false,finish=false;
+boolean execute=false,sensor,bite=false,finish=false,openM,closeM;
 int times=0;
 void loop() 
 { 
-  if(execute && bite) { //ejecutar  
-    mCoco.activeToBite();
+  if(execute) { //ejecutar  
+    if(sensor){
+      
+      if(openM){ mCoco.openMouth();
+        openM=false;
+      }
+      if(closeM){ mCoco.closeMouth();
+        closeM=false;
+      }
+      
+      if(bite){
+        mCoco.bite();         
+      }
+      
+    
+      
+        mCoco.biteForTimes();
+      
+      
+    }
+    
     digitalWrite(ledPIN,HIGH);    
   }
   else digitalWrite(ledPIN,LOW);    
@@ -145,12 +203,38 @@ void loop()
     
     //input de otra aplicacion
     switch(c){
-      case 'e':
+      case 'e'://ejecutar
           execute=true;
       break;
-      case 'b':
-          bite=true;
+      case 's'://activar sensor
+          sensor=true;
       break;
+      case 'b'://morder
+          bite=true;
+      break;      
+      case 'c':
+          closeM=true;
+      break;
+      case 'a':      
+          openM=true;           
+      break;   
+      case '5':
+        mCoco.setMaxDistance(15);
+      break;
+      case '2':
+         mCoco.setMaxDistance(30);
+      break;
+      case 'f': //4 veces
+          mCoco.setTimes(4);
+      break;
+      case 't': //2 veces
+          mCoco.setTimes(2);
+      break;
+      case 'r':
+          execute=false;
+          sensor=false;         
+      break;
+      
     
     }
 
@@ -159,12 +243,6 @@ void loop()
     
   }
   
-  
- /*
-  if(Serial.available())  // Si llega un dato por el monitor serial se envía al puerto BT
-  {
-     BT.write(Serial.read());
-  }*/
-   delay(300);
+  delay(300);
 } 
 
